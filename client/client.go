@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -13,17 +14,22 @@ import (
 
 type Client struct {
 	UserAgent  string
-	Authorizer auth.Authorizer
+	Authorizer *auth.Authorizer
 	HttpClient *http.Client
 }
 
-func NewClient(authorizer auth.Authorizer) Client {
-	return Client{
-		UserAgent:  "Snowy (Go-http-client/1.1)",
+func New(authorizer *auth.Authorizer) *Client {
+	defaultHttpClient := &http.Client{
+		Timeout: time.Second * 30,
+	}
+	return NewWithClient(authorizer, defaultHttpClient)
+}
+
+func NewWithClient(authorizer *auth.Authorizer, client *http.Client) *Client {
+	return &Client{
+		UserAgent:  "Snowy (go-http-client/1.1)",
 		Authorizer: authorizer,
-		HttpClient: &http.Client{
-			Timeout: time.Second * 10,
-		},
+		HttpClient: client,
 	}
 }
 
@@ -50,6 +56,16 @@ func (c *Client) Get(ctx context.Context, endpoint string, query *url.Values) (*
 	res, err := c.HttpClient.Do(req)
 	if err != nil {
 		return nil, err
+	}
+
+	if res.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("error: Unauthorized - Have you set SN_USERNAME and SN_PASSWORD as environment variables?")
+	}
+
+	// FIXME: Add additional checks for for most common HTTP Status codes
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error: request failed unexpectedly\ncode: %d\nurl: %s\nerror: %v", res.StatusCode, newUrl.String(), err)
 	}
 
 	return res, nil
