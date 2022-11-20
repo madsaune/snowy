@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/madsaune/snowy/api/table"
 	"github.com/madsaune/snowy/auth"
-	"github.com/madsaune/snowy/services/table"
 )
 
 func main() {
